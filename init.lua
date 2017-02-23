@@ -4,10 +4,12 @@ M.stdio = {
 	stdout = 1,
 	stderr = 2,
 }
+--for reverse lookup
+for k, v in pairs(M.stdio) do
+	M.stdio[v]=k
+end
 
 setmetatable(M,M)
-
-M.tmpdir = os.tmpfile
 
 function M:__gc()
 end
@@ -15,13 +17,27 @@ end
 --TODO: redirect to other commands?
 local Command = require"eject":extend"Command"
 
-local function escape(str)
-	local t = type(str)
-	if t == "string" then
-		return "'"..str:gsub("'","\'").."'"
-	elseif t == "number" then
-		return "&"..str
+--[[
+	Creates two handles, one for Lua (standard io file) and one for the shell (escaped string, to be used as file name)
+	file: a string, number or file handle, in the latter case, you also have to provide the original name, since Lua can't figure out what name a handle was created by
+	mode: the mode of the Lua file handle
+	?name: the filename used to create the handle, if one was provided. Whether this is the correct filename is not checked, as it is not possible with the standard library.
+]]
+local function toFileHandles(file, mode, name)
+	local lf,sf
+	if type(file) == "string" then
+		--file name
+		lf = assert(io.open(file, mode))
+		sf = "'"..file:gmatch("'","\\%1").."'"
+	elseif M.stdio[file] the
+		lf = assert(io.open(io.tmpname(),mode))
+		sf = "&"..file
+	elseif io.type(file) == "file" then
+		--this is not a good idea, but go on
+		lf = file
+		sf = "'"..file:gmatch("'","\\%1").."'"
 	end
+	return lf, sf
 end
 
 function Command:initialize( opt )
@@ -33,15 +49,7 @@ function Command:initialize( opt )
 end
 
 function Command:build()
-	local ret,i = {self.name},2
-	for k,v in pairs{
-		stdin = "<",
-		stdout = "1>",
-		stderr = "2>",
-	} do
-		ret[i],i = v..escape(self[k]),i+1
-	end
-	return table.concat(ret," ")
+	local k
 end
 
 function Command:__call( t )
