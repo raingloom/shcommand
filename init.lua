@@ -1,5 +1,6 @@
 local M = {}
 M.stdio = {
+	drop = false,
 	stdin = 0,
 	stdout = 1,
 	stderr = 2,
@@ -7,11 +8,6 @@ M.stdio = {
 --for reverse lookup
 for k, v in pairs(M.stdio) do
 	M.stdio[v]=k
-end
-
-setmetatable(M,M)
-
-function M:__gc()
 end
 
 --TODO: redirect to other commands?
@@ -42,14 +38,24 @@ end
 
 function Command:initialize( opt )
 	self.name = opt[1] or error"No command name provided, I need a path or a name"
-	self.stdin = opt.stdin
-	self.stdout = opt.stdout
-	self.stderr = opt.stderr
-	self.base = self:build()
-end
-
-function Command:build()
-	local k
+	local command, i = {self.name}, 2
+	--if they are defined or not M.stdio.drop (which is set to false)
+	if opt.stdin then
+		local lf, sf, path = toFileHandles(opt.stdin, "a")
+		self.stdin = lf
+		self.stdinPath = opt.stdin
+		command[i], i = "0<"..sf, i+1
+	end
+	if opt.stdout then
+		local lf, sf = toFileHandles(opt.stdin, "a")
+		self.stdin = lf
+		self.command = self.command.." "..sf
+	end
+	if opt.stderr then
+		local lf, sf = toFileHandles(opt.stdin, "a")
+		self.stdin = lf
+		self.command = self.command.." "..sf
+	end	
 end
 
 function Command:__call( t )
